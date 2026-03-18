@@ -1,7 +1,9 @@
-# -*- mode: ruby -*-
-# vi: set ft=ruby :
+<parent>
+    <groupId>org.springframework.boot</groupId>
+    <artifactId>spring-boot-starter-parent</artifactId>
+    <version>3.2.0</version> 
+</parent>
 
-Vagrant.configure("2") do |config|
-  config.vm.box = "bento/ubuntu-20.04"
-  config.vm.network "public_network"
-end
+<properties>
+    <java.version>21</java.version>
+</properties>
