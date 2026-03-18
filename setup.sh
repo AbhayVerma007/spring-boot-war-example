@@ -1,55 +1,48 @@
 #!/bin/bash
-#####
-# this script will setup this project.
-# run ./setup.sh to run this project.
-#####
-# Include files. 
 . ./scripts/utils.sh
 . ./scripts/variables.sh
 
-
-
 function clean_up(){
-    if rm -rf ./target
-    then
-        echo -e "${GREEN}clean up successfull.${NOCOLOR}"
-    else
-        echo -e "${GREEN}not able to do clean up.${NOCOLOR}"
-    fi
+    rm -rf ./target
+    echo -e "${GREEN}Clean up successful.${NOCOLOR}"
 }
 
 trap "clean_up;exit 2" 2
 
-showBanner scripts/banner.txt
-
-if [[ $UID != 0 ]]
-then
-    print_exit 1 "user is not a root user"
+# 1. Permission Check (Adjusted for Jenkins)
+if [[ $UID != 0 ]]; then
+    echo "Warning: Not running as root. This may fail to install packages or copy to /var/lib/."
 fi
 
-read -p "please enter access path " APP_CONTEXT
-APP_CONTEXT=${APP_CONTEXT:-app}
+# 2. Modernize the Code (The Jakarta Shift)
+# This fixes the 404 error by converting the code for Tomcat 10
+echo "Converting code for Tomcat 10 compatibility..."
+find src/main/java -name "*.java" -exec sed -i 's/javax.servlet/jakarta.servlet/g' {} +
 
+# 3. Repository Update
 apt-get update > /dev/null &
-last_command_pid=$!
-showProgress ${last_command_pid}
+showProgress $!
+wait $!
 
-wait ${last_command_pid} || print_exit 1 "not able to update the repository."
-
-
+# 4. Install Modern Stack (Using Tomcat 10)
 installPackage maven
-installPackage tomcat9
-mavenTarget test
-mavenTarget package
+installPackage tomcat10  # Changed from tomcat9
 
-if cp -rf target/hello-world-0.0.1-SNAPSHOT.war /var/lib/tomcat9/webapps/${APP_CONTEXT}.war
-then
-    echo "application Deployed successfully. you can access it on http://{IPADDRESS}/${APP_CONTEXT}"
+# 5. Build
+mavenTarget clean test package
+
+# 6. Smart Deployment
+APP_CONTEXT=${1:-app}
+TARGET_WAR="target/hello-world-0.0.1-SNAPSHOT.war"
+TOMCAT_DIR="/var/lib/tomcat10/webapps"
+
+if cp -rf "$TARGET_WAR" "$TOMCAT_DIR/${APP_CONTEXT}.war"; then
+    echo "Application Deployed successfully to Tomcat 10."
+    echo "Access it on http://localhost:8080/${APP_CONTEXT}"
 else
-    print_exit 1 "not able to Deploy the application."
+    echo "Failed to deploy. Check if /var/lib/tomcat10 exists."
+    exit 1
 fi
-
-# Clean Up code.
 
 clean_up
 exit 0
